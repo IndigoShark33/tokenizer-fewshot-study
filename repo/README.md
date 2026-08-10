@@ -2,7 +2,7 @@
 
 Code and results for the paper (Roy Seligman, Pioneer Academics NLP Research Concentration, mentored by Prof. Fatma Tarlaci, July 2026).
 
-**summary:** Across 8 models (XGLM 564M-7.5B, BLOOM 560m-7b1), 2 benchmarks (XCOPA, XStoryCloze), and 21 language conditions with 5 prompt seeds per result, tokenization metrics (fertility, STRR, premium, vocabulary usage) significantly predict few-shot accuracy at scale — but no metric survives controlling for each language's share of training data, fertility and STRR prove empirically redundant (rho <= -0.93), the link tracks task capability, and languages absent from training stay at chance regardless of scale.
+**summary:** Across 8 models (XGLM 564M-7.5B, BLOOM 560m-7b1), 2 benchmarks (XCOPA, XStoryCloze), and 21 language conditions with 5 prompt seeds per result, tokenization metrics (fertility, STRR, premium, vocabulary usage) significantly predict few-shot accuracy at scale, but no metric survives controlling for each language's share of training data, fertility and STRR prove empirically redundant (rho <= -0.93), the link tracks task capability, and languages absent from training stay at chance regardless of scale.
 
 ## Repository layout
 
