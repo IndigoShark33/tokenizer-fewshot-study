@@ -21,7 +21,7 @@ results/            # per-model result JSONs, master_seeds.csv, metrics.csv, pro
 1. `pip install torch transformers datasets scipy pandas matplotlib`
 2. Set an HF token in `sweep.py` (XStoryCloze is gated).
 3. `python metrics_flores.py` (CPU, ~10 min; downloads FLORES-200)
-4. `python sweep.py` (GPU; resumable — every score checkpoints to `results/` as it completes)
+4. `python sweep.py` (GPU; resumable, every score checkpoints to `results/` as it completes)
 5. `python analysis.py`
 6. `python sum_robustness.py` (robustness check, 0-shot summed scoring, both 7B models)
 
