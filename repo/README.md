@@ -27,7 +27,7 @@ results/            # per-model result JSONs, master_seeds.csv, metrics.csv, pro
 
 ## Reproducibility note
 
-Experiments were run interactively in Google Colab Pro+ on a single NVIDIA A100 40GB in float16. The full sweep totaled approximately 10 GPU-hours (50.69 Colab compute units at ~5.3 units/hour), with the two 7B models making up the majority. The scripts here are consolidated equivalents of the executed notebook cells; results in `results/` are the exact files produced by the original runs. Seed-to-seed SD averaged 0.79-1.10 accuracy points per model.
+Experiments were run interactively in Google Colab Pro+ on a single NVIDIA A100 40GB in float16. The full sweep totaled approximately 20 GPU-hours (111.47 units), with the two 7B models making up the majority. The scripts here are consolidated equivalents of the executed notebook cells; results in `results/` are the exact files produced by the original runs. Seed-to-seed SD averaged 0.79-1.10 accuracy points per model.
 
 ## Data sources
 
