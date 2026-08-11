@@ -1,0 +1,3 @@
+XCOPA: "[premise, period removed] because/so [choice, lowercased]"
+XStoryCloze: "[sentence_1-4] [quiz_choice]" with 4-shot examples prepended
+All templates held constant in English across all languages (Lin et al., 2022)
