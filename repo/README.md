@@ -31,7 +31,7 @@ Experiments were run interactively in Google Colab Pro+ on a single NVIDIA A100 
 
 ## Data sources
 
-- XCOPA: cambridgeltl/xcopa (HF) · XStoryCloze: juletxara/xstory_cloze (HF, gated) · COPA: aps/super_glue
+- XCOPA: cambridgeltl/xcopa (HF) · XStoryCloze: juletxara/xstory_cloze (HF, public) · COPA: aps/super_glue
 - FLORES-200 devtest: official Meta release tarball
 - Training-data shares: BLOOM Table 1 byte counts (BigScience Workshop, 2022); XGLM Table A10 token counts (Lin et al., 2022)
 
