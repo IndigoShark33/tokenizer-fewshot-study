@@ -19,7 +19,7 @@ results/            # per-model result JSONs, master_seeds.csv, metrics.csv, pro
 ## Reproducing
 
 1. `pip install torch transformers datasets scipy pandas matplotlib`
-2. Set an HF token in `sweep.py` (XStoryCloze is gated).
+2. Set an HF token in `sweep.py` (XStoryCloze is public)
 3. `python metrics_flores.py` (CPU, ~10 min; downloads FLORES-200)
 4. `python sweep.py` (GPU; resumable, every score checkpoints to `results/` as it completes)
 5. `python analysis.py`
