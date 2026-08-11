@@ -1,4 +1,4 @@
 XCOPA: https://huggingface.co/datasets/cambridgeltl/xcopa  public, test split, 500 items
-XStoryCloze: https://huggingface.co/datasets/juletxara/xstory_cloze  gated, eval split subsampled to 500
+XStoryCloze: https://huggingface.co/datasets/juletxara/xstory_cloze  public, eval split subsampled to 500
 English COPA: https://huggingface.co/datasets/aps/super_glue public, validation split
 FLORES-200: https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz public, devtest split
