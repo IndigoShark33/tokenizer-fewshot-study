@@ -1,17 +1,22 @@
 """Robustness check: rerun 0-shot for both 7B models with SUMMED (not averaged) log-probability scoring.
 Averaging normalizes by candidate token length, which is what fertility measures; this checks whether
-the correlation pattern depends on that normalization. Deterministic (no seeds). Output: results/{tag}_sum0.json."""
+the correlation pattern depends on that normalization. Deterministic (no seeds). Output: {RESULTS_DIR}/{tag}_sum0.json.
+v2 (Nov 2026): same scorer as sweep.py (common.score with reduce="sum"); results_v2/ by default."""
 import torch, json, os
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from huggingface_hub import login
-login(os.environ.get("HF_TOKEN", "hf_YOUR_TOKEN_HERE"))
+from common import copa_text, score
 
-SAVE = "results"; os.makedirs(SAVE, exist_ok=True)
+if os.environ.get("HF_TOKEN"):
+    from huggingface_hub import login
+    login(os.environ["HF_TOKEN"])
+
+SAVE = os.environ.get("RESULTS_DIR", "results_v2"); os.makedirs(SAVE, exist_ok=True)
 XCOPA_LANGS = ["et","ht","id","it","sw","ta","th","tr","vi","zh","qu"]
 XSC_LANGS = ["ru","zh","es","ar","hi","id","te","sw","eu","my"]
 MODELS = ["facebook/xglm-7.5B","bigscience/bloom-7b1"]
-XSC_SUBSAMPLE = 500
+XSC_N = os.environ.get("XSC_N", "500")
+XSC_SUBSAMPLE = None if XSC_N == "all" else int(XSC_N)
 
 def load_model(name):
     tok = AutoTokenizer.from_pretrained(name)
@@ -19,16 +24,7 @@ def load_model(name):
     mdl.eval(); return tok, mdl
 
 def score_sum(tok, mdl, prompt, option):
-    p_ids = tok(prompt, return_tensors="pt").input_ids
-    full = tok(prompt + option, return_tensors="pt").to(mdl.device)
-    labels = full.input_ids.clone(); labels[0, :p_ids.shape[1]] = -100
-    n_opt = full.input_ids.shape[1] - p_ids.shape[1]
-    with torch.no_grad():
-        return -mdl(**full, labels=labels).loss.item() * n_opt
-
-def copa_text(premise, question, choice):
-    conn = " because " if question == "cause" else " so "
-    return premise.rstrip(".") + conn, choice[0].lower() + choice[1:]
+    return score(tok, mdl, prompt, option, reduce="sum")
 
 def run_xcopa(tok, mdl, lang):
     test = list(load_dataset("cambridgeltl/xcopa", lang)["test"]); c = 0
@@ -47,7 +43,9 @@ def run_encopa(tok, mdl):
     return round(c/len(test)*100, 2)
 
 def run_xsc(tok, mdl, lang):
-    test = list(load_dataset("juletxara/xstory_cloze", lang)["eval"])[:XSC_SUBSAMPLE]; c = 0
+    test = list(load_dataset("juletxara/xstory_cloze", lang)["eval"])
+    if XSC_SUBSAMPLE: test = test[:XSC_SUBSAMPLE]
+    c = 0
     for it in test:
         story = " ".join(it[f"input_sentence_{i}"] for i in range(1,5)) + " "
         pred = 1 if score_sum(tok,mdl,story,it["sentence_quiz1"]) > score_sum(tok,mdl,story,it["sentence_quiz2"]) else 2

@@ -1,3 +1,4 @@
-XCOPA: "[premise, period removed] because/so [choice, lowercased]"
+XCOPA: "[premise, final period removed (. or 。)] because/so [choice, lowercased]"
 XStoryCloze: "[sentence_1-4] [quiz_choice]" with 4-shot examples prepended
 All templates held constant in English across all languages (Lin et al., 2022)
+Scoring (v2): trailing whitespace moves from the prompt to the option; the option's tokens are those that follow the prompt's own tokens in the joint encoding

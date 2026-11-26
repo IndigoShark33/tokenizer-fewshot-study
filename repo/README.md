@@ -7,27 +7,50 @@ Code and results for the paper (Roy Seligman, Pioneer Academics NLP Research Con
 ## Repository layout
 
 ```
+common.py           # shared helpers: prompt/option split, scoring, in-context word counts, COPA template
 sweep.py            # main evaluation harness: 8 models x 2 benchmarks x {0,4}-shot x 5 seeds, checkpointed
-metrics_flores.py   # computes fertility / STRR / premium / vocab_use on FLORES-200; writes metrics.csv + proportions.csv
+metrics_flores.py   # fertility / STRR / premium / vocab_use on FLORES-200; writes metrics.csv, proportions.csv, byte_premium.csv
 analysis.py         # seed averaging, z-scoring, Spearman + bootstrap CI + partial Spearman + permutation p,
-                    # scale table, seen/unseen table, per-benchmark check, intercorrelations, external validation
+                    # scale table, seen/unseen table, per-benchmark check, intercorrelations,
+                    # reverse partials, power table, byte-premium control
 sum_robustness.py   # 0-shot rerun of both 7B models with SUMMED (not averaged) log-prob scoring
-figures.py          # the four paper figures
-results/            # per-model result JSONs, master_seeds.csv, metrics.csv, proportions.csv
+seam_check.py       # how often v1's prompt/option boundary dropped an option token (CPU only)
+figures.py          # the paper's two figures, computed from the result files
+tests/              # tests for common.py on toy tokenizers (no downloads)
+results/            # v1 result files, unchanged
+results_v2/         # v2 result files (written by the scripts above)
 ```
 
-## Reproducing
+## Version 2 (November 2026)
 
-1. `pip install torch transformers datasets scipy pandas matplotlib`
-2. Set an HF token in `sweep.py` (XStoryCloze is public)
-3. `python metrics_flores.py` (CPU, ~10 min; downloads FLORES-200)
-4. `python sweep.py` (GPU; resumable, every score checkpoints to `results/` as it completes)
-5. `python analysis.py`
+What changed, and why:
+
+- **Scoring seam** (`common.encode_pair`). v1 tokenized the prompt with its trailing space, so the loss mask also covered the option's first token. v2 moves trailing whitespace from the prompt to the option and splits the joint encoding at the prompt's own token length, as lm-evaluation-harness does. `seam_check.py` reports how often v1 dropped a token, by tokenizer family and language.
+- **Word-level metrics** (`common.tokens_per_word`). Fertility and STRR count each word's tokens inside its sentence. v1 tokenized bare words, which for BLOOM's byte-level BPE measured `word` instead of the space-led `Ġword` the model sees.
+- **Premium and vocab_use** count content tokens only (no BOS/EOS).
+- **Premise punctuation.** Chinese "。" (and the final marks of other scripts) is stripped before the English connector, as the ASCII period always was.
+- **Byte premium.** `metrics_flores.py` writes each language's byte premium and BLOOM's byte shares divided by it (`proportion_bp`); `analysis.py` reports a byte-premium control for BLOOM.
+- **Analysis.** `analysis.py` adds reverse partials (does data share survive a control for each metric?) and the smallest correlation the design could detect. It now also runs on the v1 files: v1 stopped with a `KeyError` because the v1 `proportions.csv` has no `family` column.
+- **Figures.** `figures.py` computes the plotted values from the result files; v1 hard-coded them.
+- **Results.** `results/` keeps the v1 files exactly as produced. The two 7B files also hold 44 unseeded keys from pilot runs made before seeding was added; `analysis.py` skips them. v2 writes to `results_v2/`.
+
+## Reproducing (v2)
+
+1. `pip install torch transformers datasets scipy pandas matplotlib pytest`
+2. `python -m pytest -q tests`
+3. `python seam_check.py` (CPU; tokenizers and datasets only)
+4. `python metrics_flores.py` (CPU, ~10 min; downloads FLORES-200)
+5. `python sweep.py` (GPU; resumable, every score checkpoints to `results_v2/` as it completes)
 6. `python sum_robustness.py` (robustness check, 0-shot summed scoring, both 7B models)
+7. `python analysis.py`, then `python figures.py`
+
+Settings (environment variables): `RESULTS_DIR` (default `results_v2`; `RESULTS_DIR=results` analyses the v1 files); `XSC_N` (default `500`, the first 500 XStoryCloze eval items; `all` uses the full split and roughly doubles GPU time); `HF_TOKEN` (optional; every model and dataset is public).
 
 ## Reproducibility note
 
 Experiments were run interactively in Google Colab Pro+ on a single NVIDIA A100 40GB in float16. The full sweep totaled approximately 20 GPU-hours (111.47 units), with the two 7B models making up the majority. The scripts here are consolidated equivalents of the executed notebook cells; results in `results/` are the exact files produced by the original runs. Seed-to-seed SD averaged 0.79-1.10 accuracy points per model.
+
+v2 rerun: [hardware, GPU-hours, transformers version, dates]. Results in `results_v2/`.
 
 ## Data sources
 

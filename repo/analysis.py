@@ -1,11 +1,15 @@
 """Full analysis: seed averaging, within-benchmark z-scoring, Spearman + 10k bootstrap CI,
 partial Spearman controlling training-data share + 5k permutation p, Bonferroni note,
-scale table, seen/unseen table, per-benchmark check, metric intercorrelations."""
-import json, os
+scale table, seen/unseen table, per-benchmark check, metric intercorrelations.
+v2 (Nov 2026): reads RESULTS_DIR (default results_v2; RESULTS_DIR=results for the v1 files); writes zdata.csv
+for figures.py; adds reverse partials, a power table and a byte-premium control for BLOOM."""
+import json, os, sys
 import numpy as np, pandas as pd
-from scipy.stats import spearmanr, rankdata
+from scipy.stats import spearmanr, rankdata, norm
 
-SAVE = "results"
+SAVE = os.environ.get("RESULTS_DIR", "results_v2")
+if not os.path.isdir(SAVE):
+    sys.exit(f"{SAVE}/ not found. Run sweep.py and metrics_flores.py first, or set RESULTS_DIR=results for the v1 files.")
 TAGS = ["xglm-564M","xglm-1.7B","xglm-2.9B","xglm-7.5B",
         "bloom-560m","bloom-1b7","bloom-3b","bloom-7b1"]
 SEEN_X = {"et","ht","id","it","sw","ta","th","tr","vi","zh","qu","ru","es","ar","hi","te","eu","my"}
@@ -29,6 +33,8 @@ avg.to_csv(f"{SAVE}/master_seeds.csv", index=False)
 
 metrics = pd.read_csv(f"{SAVE}/metrics.csv")
 props = pd.read_csv(f"{SAVE}/proportions.csv")
+if "family" not in props.columns:   # the v1 proportions.csv has no family column
+    props["family"] = props.model.str.split("-").str[0]
 
 work = avg[avg.benchmark != "encopa"].copy()
 work["family"] = work.model.str.split("-").str[0]
@@ -44,11 +50,13 @@ for (m, b, s), g in wseen.groupby(["model","benchmark","shot"]):
 zdf = pd.DataFrame(zrows).groupby(["model","lang","shot"], as_index=False).z.mean()
 data = zdf.merge(wseen.drop_duplicates(["model","lang"])[["model","lang","premium","fertility","strr","vocab_use","proportion"]],
                  on=["model","lang"])
+data.to_csv(f"{SAVE}/zdata.csv", index=False)
 
 def partial_spearman(x, y, z):
     rx, ry, rz = rankdata(x), rankdata(y), rankdata(z)
     rxy, rxz, ryz = spearmanr(rx,ry)[0], spearmanr(rx,rz)[0], spearmanr(ry,rz)[0]
-    return (rxy - rxz*ryz) / np.sqrt((1-rxz**2)*(1-ryz**2))
+    with np.errstate(invalid="ignore", divide="ignore"):   # undefined (nan) if a variable is perfectly rank-correlated with z
+        return (rxy - rxz*ryz) / np.sqrt((1-rxz**2)*(1-ryz**2))
 
 def boot_ci(x, y, n=10000):
     rng = np.random.default_rng(0); idx = np.arange(len(x)); cs = []
@@ -59,10 +67,12 @@ def boot_ci(x, y, n=10000):
 
 def perm_p(x, y, z, n=5000):
     obs = partial_spearman(x, y, z)
-    rng = np.random.default_rng(0); yv = np.array(y); cnt = 0
+    rng = np.random.default_rng(0); yv = np.array(y); cnt = 0; valid = 0
     for _ in range(n):
-        cnt += abs(partial_spearman(x, rng.permutation(yv), z)) >= abs(obs)
-    return obs, (cnt + 1) / (n + 1)
+        r = partial_spearman(x, rng.permutation(yv), z)
+        if np.isnan(r): continue            # v2: skip draws where the partial is undefined (v1 counted them as not extreme)
+        valid += 1; cnt += abs(r) >= abs(obs)
+    return obs, (cnt + 1) / (valid + 1)
 
 print("======== PRIMARY: 7B models, seed-averaged, one point per seen language ========")
 pvals = []
@@ -114,3 +124,43 @@ for fam in ["xglm","bloom"]:
     mm = metrics[metrics.family==fam].merge(props[["family","lang","proportion"]], on=["family","lang"], how="left")
     print(f"\n--- {fam} ---")
     print(mm[["premium","fertility","strr","vocab_use","proportion"]].corr(method="spearman").round(2).to_string())
+
+print("\n======== REVERSE PARTIALS: does data share survive a control for each metric? (7B) ========")
+for m in ["xglm-7.5B","bloom-7b1"]:
+    for s in [0, 4]:
+        d = data[(data.model == m) & (data.shot == s)].dropna(subset=["proportion"])
+        r, p = spearmanr(d.proportion, d.z)
+        print(f"\n--- {m} | {s}-shot --- data share alone: rho={r:+.3f} (p={p:.3f}, n={len(d)})")
+        for metric in ["premium","fertility","strr"]:
+            dd = d.dropna(subset=[metric])
+            if len(dd) < 5: continue
+            pr, pp = perm_p(dd.proportion.values, dd.z.values, dd[metric].values)
+            print(f"data share | {metric}: partial={pr:+.3f} (perm p={pp:.3f}, n={len(dd)})")
+
+print("\n======== POWER: smallest |rho| detectable at 80% power, two-sided alpha .05 ========")
+print("Fisher z with the Spearman variance 1.06/(n-3-k); k = number of covariates")
+def min_detectable(n, k=0, power=0.80, alpha=0.05):
+    zc = norm.ppf(1 - alpha / 2) + norm.ppf(power)
+    return float(np.tanh(zc * np.sqrt(1.06 / (n - 3 - k))))
+ns = sorted({len(data[(data.model == m) & (data.shot == 4)].dropna(subset=[metric]))
+             for m in ["xglm-7.5B","bloom-7b1"] for metric in ["premium","fertility","strr"]}, reverse=True)
+for n in ns:
+    print(f"n={n:2d}: zero-order {min_detectable(n):.2f} | partial, one covariate {min_detectable(n, 1):.2f}")
+
+if "proportion_bp" in props.columns:
+    print("\n======== BYTE-PREMIUM CONTROL (BLOOM): byte shares divided by the byte premium ========")
+    bp = props[props.family == "bloom"].set_index("lang")
+    raw_rank, adj_rank = bp.proportion.rank(ascending=False), bp.proportion_bp.rank(ascending=False)
+    moved = [f"{l} {int(raw_rank[l])}->{int(adj_rank[l])}" for l in bp.index if raw_rank[l] != adj_rank[l]]
+    print("rank changes (1 = largest share):", ", ".join(moved) if moved else "none")
+    for s in [0, 4]:
+        d = data[(data.model == "bloom-7b1") & (data.shot == s)].copy()
+        d["share_bp"] = d.lang.map(bp.proportion_bp)
+        print(f"\n--- bloom-7b1 | {s}-shot ---")
+        for metric in ["premium","fertility","strr"]:
+            dd = d.dropna(subset=[metric, "share_bp"])
+            if len(dd) < 5: continue
+            pr, pp = perm_p(dd[metric].values, dd.z.values, dd.share_bp.values)
+            rr, rp = perm_p(dd.share_bp.values, dd.z.values, dd[metric].values)
+            print(f"{metric} | share_bp: partial={pr:+.3f} (perm p={pp:.3f}) || share_bp | {metric}: "
+                  f"partial={rr:+.3f} (perm p={rp:.3f}), n={len(dd)}")
