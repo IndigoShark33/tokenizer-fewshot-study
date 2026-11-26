@@ -97,6 +97,7 @@ if __name__ == "__main__":
         tag = model_name.split("/")[-1]
         fpath = f"{SAVE}/{tag}.json"
         done = json.load(open(fpath)) if os.path.exists(fpath) else {}
+        if len(done) >= 132: continue   # all 132 scores for this model are saved: skip loading it
         tok, mdl = load_model(model_name)
         for k in SHOTS:
             for seed in (SEEDS if k > 0 else [0]):
