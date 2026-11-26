@@ -4,6 +4,9 @@ v2 (Nov 2026) changes, each tested in tests/test_common.py:
   - encode_pair: token-level prompt/option split. v1 masked the option's first token.
   - tokens_per_word: word counts taken inside the sentence. v1 tokenized bare words.
   - copa_text: strips the sentence-final mark of the premise's script, not only the ASCII period.
+  - score (26 Nov): the output layer runs only at the positions that predict option tokens, so a long
+    prompt no longer builds a (length x vocabulary) logit matrix. Same log-probabilities up to float
+    rounding.
 """
 from collections import Counter
 
@@ -41,15 +44,18 @@ def encode_pair(tok, prompt, option):
 
 
 def score(tok, mdl, prompt, option, reduce="mean"):
-    """Log-probability of the option given the prompt, prompt tokens masked from the loss.
+    """Log-probability of the option given the prompt. Only the positions that predict option tokens
+    go through the output layer: float32 logits over BLOOM's 250,880-token vocabulary take about 1 MB
+    per position, and Burmese 4-shot prompts run to thousands of tokens.
     reduce="mean": average over option tokens (main analysis). reduce="sum": total (Appendix B)."""
     import torch
     ctx, cont = encode_pair(tok, prompt, option)
     ids = torch.tensor([ctx + cont], device=mdl.device)
-    labels = ids.clone()
-    labels[0, :len(ctx)] = -100
-    with torch.no_grad():
-        mean_logprob = -mdl(input_ids=ids, labels=labels).loss.item()
+    with torch.no_grad():   # logits only where an option token is predicted (memory fix, 26 Nov)
+        h = mdl.base_model(input_ids=ids, use_cache=False).last_hidden_state[0, len(ctx) - 1:-1]
+        logits = mdl.get_output_embeddings()(h).float()
+        target = torch.tensor(cont, device=logits.device)
+        mean_logprob = torch.log_softmax(logits, -1).gather(1, target[:, None]).mean().item()
     return mean_logprob if reduce == "mean" else mean_logprob * len(cont)
 
 
