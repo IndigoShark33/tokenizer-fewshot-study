@@ -1,14 +1,21 @@
 """Main evaluation harness. 8 models x (COPA-en + XCOPA + XStoryCloze) x {0,4}-shot x 5 seeds.
-Checkpointed: every score writes to results/{model}.json immediately; rerunning skips finished work."""
+Checkpointed: every score writes to {RESULTS_DIR}/{model}.json immediately; rerunning skips finished work.
+
+v2 (Nov 2026): token-level prompt/option split (common.encode_pair); script-aware premise punctuation;
+results go to results_v2/ by default, so the v1 files in results/ stay exactly as they were.
+Environment: RESULTS_DIR (default results_v2); XSC_N (default 500; "all" for the full eval split);
+HF_TOKEN (optional; every model and dataset here is public)."""
 import torch, json, os
 import numpy as np
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from huggingface_hub import login
+from common import copa_text, score, SEAM
 
-login(os.environ.get("HF_TOKEN", "hf_YOUR_TOKEN_HERE"))
+if os.environ.get("HF_TOKEN"):
+    from huggingface_hub import login
+    login(os.environ["HF_TOKEN"])
 
-SAVE = "results"
+SAVE = os.environ.get("RESULTS_DIR", "results_v2")
 os.makedirs(SAVE, exist_ok=True)
 XCOPA_LANGS = ["et","ht","id","it","sw","ta","th","tr","vi","zh","qu"]
 XSC_LANGS = ["ru","zh","es","ar","hi","id","te","sw","eu","my"]
@@ -18,26 +25,14 @@ MODELS = ["facebook/xglm-564M","bigscience/bloom-560m",
           "facebook/xglm-7.5B","bigscience/bloom-7b1"]
 SHOTS = [0, 4]
 SEEDS = [0, 1, 2, 3, 4]
-XSC_SUBSAMPLE = 500
+XSC_N = os.environ.get("XSC_N", "500")
+XSC_SUBSAMPLE = None if XSC_N == "all" else int(XSC_N)
 
 def load_model(name):
     tok = AutoTokenizer.from_pretrained(name)
     mdl = AutoModelForCausalLM.from_pretrained(name, dtype=torch.float16, device_map="auto")
     mdl.eval()
     return tok, mdl
-
-def score(tok, mdl, prompt, option):
-    """Average log-probability of option tokens given prompt (prompt masked from loss)."""
-    p_ids = tok(prompt, return_tensors="pt").input_ids
-    full = tok(prompt + option, return_tensors="pt").to(mdl.device)
-    labels = full.input_ids.clone()
-    labels[0, :p_ids.shape[1]] = -100
-    with torch.no_grad():
-        return -mdl(**full, labels=labels).loss.item()
-
-def copa_text(premise, question, choice):
-    conn = " because " if question == "cause" else " so "
-    return premise.rstrip(".") + conn, choice[0].lower() + choice[1:]
 
 def pick(pool, k, seed):
     if k == 0: return []
@@ -76,7 +71,8 @@ def run_encopa(tok, mdl, k, seed):
 
 def run_xsc(tok, mdl, lang, k, seed):
     d = load_dataset("juletxara/xstory_cloze", lang)
-    test, pool = list(d["eval"])[:XSC_SUBSAMPLE], list(d["train"])
+    test, pool = list(d["eval"]), list(d["train"])
+    if XSC_SUBSAMPLE: test = test[:XSC_SUBSAMPLE]
     shots = ""
     for s in pick(pool, k, seed):
         story = " ".join(s[f"input_sentence_{i}"] for i in range(1, 5))
@@ -118,4 +114,5 @@ if __name__ == "__main__":
                        lambda lang=lang, k=k, seed=seed: run_xsc(tok, mdl, lang, k, seed))
         del mdl
         torch.cuda.empty_cache()
-        print(f"=== {tag} COMPLETE ===")
+        print(f"=== {tag} COMPLETE | seam: {SEAM['prompt_changed']} of {SEAM['pairs']} pairs "
+              f"changed prompt tokens so far ===")

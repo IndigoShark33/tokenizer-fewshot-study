@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+__MACOSX/
+.env
+flores200_dataset/
+flores.tar.gz
