@@ -2,7 +2,9 @@
 
 Code and results for the paper (Roy Seligman, Pioneer Academics NLP Research Concentration, mentored by Prof. Fatma Tarlaci, July 2026).
 
-**summary:** Across 8 models (XGLM 564M-7.5B, BLOOM 560m-7b1), 2 benchmarks (XCOPA, XStoryCloze), and 21 language conditions with 5 prompt seeds per result, tokenization metrics (fertility, STRR, premium, vocabulary usage) significantly predict few-shot accuracy at scale, but no metric survives controlling for each language's share of training data, fertility and STRR prove empirically redundant (rho <= -0.93), the link tracks task capability, and languages absent from training stay at chance regardless of scale.
+**Summary (v1, July 2026):** Across 8 models (XGLM 564M-7.5B, BLOOM 560m-7b1), 2 benchmarks (XCOPA, XStoryCloze), and 21 language conditions with 5 prompt seeds per result, tokenization metrics (fertility, STRR, premium, vocabulary usage) significantly predict few-shot accuracy at scale, but no metric survives controlling for each language's share of training data, fertility and STRR prove empirically redundant (rho <= -0.93), the link tracks task capability, and languages absent from training stay at chance regardless of scale.
+
+**Version 2 (November 2026), after fixing the scoring seam and rerunning all eight models:** no tokenizer metric stays significant once training-data share is controlled and multiple tests are corrected for; XGLM's byte premium comes closest (partial rho = -0.51, permutation p = .043 at 0-shot, not significant after Bonferroni). XGLM's smallest model now shows a weak, non-significant link, and in BLOOM, data share keeps its effect against every metric. Full output: `results_v2/analysis_v2.txt`.
 
 ## Repository layout
 
@@ -50,7 +52,7 @@ Settings (environment variables): `RESULTS_DIR` (default `results_v2`; `RESULTS_
 
 Experiments were run interactively in Google Colab Pro+ on a single NVIDIA A100 40GB in float16. The full sweep totaled approximately 20 GPU-hours (111.47 units), with the two 7B models making up the majority. The scripts here are consolidated equivalents of the executed notebook cells; results in `results/` are the exact files produced by the original runs. Seed-to-seed SD averaged 0.79-1.10 accuracy points per model.
 
-v2 rerun: [hardware, GPU-hours, transformers version, dates]. Results in `results_v2/`.
+v2 rerun (November 2026): float16 on NVIDIA T4, L4 and A100 GPUs in Google Colab Pro+; rescoring one condition on a different GPU type moved its accuracy by 0.8 points (4 of 500 items). Seed-to-seed SD averaged 0.76-1.21 accuracy points per model. Results are in `results_v2/`, and `results_v2/analysis_v2.txt` is the output of `analysis.py`.
 
 ## Data sources
 

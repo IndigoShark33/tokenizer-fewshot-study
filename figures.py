@@ -28,7 +28,7 @@ for fam, label in [("xglm", "XGLM"), ("bloom", "BLOOM")]:
     plt.plot([SIZES[t] for t in tags], rhos, marker="o", label=label)
 plt.axhline(0, color="gray", lw=.5)
 plt.xlabel("Model size (billions of parameters)"); plt.ylabel("STRR vs accuracy (Spearman rho)")
-plt.title("Tokenizer-performance link emerges with scale (4-shot)")
+plt.title("STRR-accuracy correlation by model size (4-shot)")
 plt.legend(); plt.tight_layout(); plt.savefig(f"{SAVE}/fig1_scale.png", dpi=200)
 
 btags = [t for t in SIZES if t.startswith("bloom")]

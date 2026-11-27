@@ -1,0 +1,115 @@
+======== PRIMARY: 7B models, seed-averaged, one point per seen language ========
+
+--- xglm-7.5B | 0-shot ---
+premium: rho=-0.742 (p=0.000, CI[-0.921,-0.417], n=18) | partial=-0.506 (perm p=0.043)
+fertility: rho=-0.515 (p=0.050, CI[-0.839,-0.032], n=15) | partial=-0.241 (perm p=0.394)
+strr: rho=0.524 (p=0.045, CI[0.007,0.857], n=15) | partial=0.221 (perm p=0.436)
+
+--- xglm-7.5B | 4-shot ---
+premium: rho=-0.723 (p=0.001, CI[-0.895,-0.367], n=18) | partial=-0.450 (perm p=0.068)
+fertility: rho=-0.593 (p=0.020, CI[-0.84,-0.123], n=15) | partial=-0.364 (perm p=0.202)
+strr: rho=0.589 (p=0.021, CI[0.089,0.859], n=15) | partial=0.328 (perm p=0.252)
+
+--- bloom-7b1 | 0-shot ---
+premium: rho=-0.236 (p=0.511, CI[-0.736,0.464], n=10) | partial=0.039 (perm p=0.924)
+fertility: rho=-0.633 (p=0.067, CI[-0.948,0.105], n=9) | partial=-0.365 (perm p=0.366)
+strr: rho=0.583 (p=0.099, CI[-0.228,0.948], n=9) | partial=0.291 (perm p=0.484)
+
+--- bloom-7b1 | 4-shot ---
+premium: rho=-0.394 (p=0.260, CI[-0.922,0.359], n=10) | partial=-0.159 (perm p=0.674)
+fertility: rho=-0.667 (p=0.050, CI[-0.947,-0.078], n=9) | partial=-0.402 (perm p=0.314)
+strr: rho=0.633 (p=0.067, CI[-0.077,0.945], n=9) | partial=0.354 (perm p=0.381)
+
+Bonferroni across 12 primary tests: alpha=0.0042; 2 survive (min p=0.000)
+
+======== SCALE: 4-shot rho by model size ========
+xglm-564M en-copa=60.2 | premium rho=-0.439 | fertility rho=-0.379 | strr rho=+0.357
+xglm-1.7B en-copa=66.8 | premium rho=-0.478 | fertility rho=-0.421 | strr rho=+0.425
+xglm-2.9B en-copa=64.6 | premium rho=-0.715 | fertility rho=-0.614 | strr rho=+0.621
+xglm-7.5B en-copa=71.8 | premium rho=-0.723 | fertility rho=-0.593 | strr rho=+0.589
+bloom-560m en-copa=64.2 | premium rho=-0.261 | fertility rho=-0.633 | strr rho=+0.683
+bloom-1b7 en-copa=68.0 | premium rho=-0.394 | fertility rho=-0.750 | strr rho=+0.767
+bloom-3b en-copa=70.0 | premium rho=-0.273 | fertility rho=-0.517 | strr rho=+0.550
+bloom-7b1 en-copa=70.4 | premium rho=-0.394 | fertility rho=-0.667 | strr rho=+0.633
+
+======== SEEN vs UNSEEN (4-shot XCOPA) ========
+xglm-564M seen mean=51.9 (n=11) | unseen mean=nan (n=0)
+xglm-1.7B seen mean=55.6 (n=11) | unseen mean=nan (n=0)
+xglm-2.9B seen mean=58.5 (n=11) | unseen mean=nan (n=0)
+xglm-7.5B seen mean=60.5 (n=11) | unseen mean=nan (n=0)
+bloom-560m seen mean=54.9 (n=5) | unseen mean=50.5 (n=6)
+bloom-1b7 seen mean=58.7 (n=5) | unseen mean=49.8 (n=6)
+bloom-3b seen mean=60.8 (n=5) | unseen mean=50.7 (n=6)
+bloom-7b1 seen mean=64.8 (n=5) | unseen mean=50.3 (n=6)
+
+======== PER-BENCHMARK: 7B, 4-shot ========
+xglm-7.5B | xcopa | premium: rho=-0.555 (p=0.077, n=11)
+xglm-7.5B | xcopa | fertility: rho=-0.783 (p=0.013, n=9)
+xglm-7.5B | xcopa | strr: rho=+0.800 (p=0.010, n=9)
+xglm-7.5B | xsc | premium: rho=-0.879 (p=0.001, n=10)
+xglm-7.5B | xsc | fertility: rho=-0.333 (p=0.420, n=8)
+xglm-7.5B | xsc | strr: rho=+0.333 (p=0.420, n=8)
+bloom-7b1 | xcopa | premium: rho=-0.700 (p=0.188, n=5)
+bloom-7b1 | xsc | premium: rho=-0.476 (p=0.233, n=8)
+bloom-7b1 | xsc | fertility: rho=-0.750 (p=0.052, n=7)
+bloom-7b1 | xsc | strr: rho=+0.750 (p=0.052, n=7)
+
+======== METRIC INTERCORRELATIONS ========
+
+--- xglm ---
+premium fertility strr vocab_use proportion
+premium 1.00 0.54 -0.52 -0.68 -0.67
+fertility 0.54 1.00 -0.99 -0.30 -0.55
+strr -0.52 -0.99 1.00 0.28 0.59
+vocab_use -0.68 -0.30 0.28 1.00 0.62
+proportion -0.67 -0.55 0.59 0.62 1.00
+
+--- bloom ---
+premium fertility strr vocab_use proportion
+premium 1.00 0.83 -0.80 -0.88 -0.37
+fertility 0.83 1.00 -0.98 -0.65 -0.58
+strr -0.80 -0.98 1.00 0.62 0.57
+vocab_use -0.88 -0.65 0.62 1.00 0.53
+proportion -0.37 -0.58 0.57 0.53 1.00
+
+======== REVERSE PARTIALS: does data share survive a control for each metric? (7B) ========
+
+--- xglm-7.5B | 0-shot --- data share alone: rho=+0.712 (p=0.001, n=18)
+data share | premium: partial=+0.429 (perm p=0.089, n=18)
+data share | fertility: partial=+0.528 (perm p=0.048, n=15)
+data share | strr: partial=+0.512 (perm p=0.059, n=15)
+
+--- xglm-7.5B | 4-shot --- data share alone: rho=+0.744 (p=0.000, n=18)
+data share | premium: partial=+0.503 (perm p=0.043, n=18)
+data share | fertility: partial=+0.503 (perm p=0.066, n=15)
+data share | strr: partial=+0.486 (perm p=0.076, n=15)
+
+--- bloom-7b1 | 0-shot --- data share alone: rho=+0.709 (p=0.022, n=10)
+data share | premium: partial=+0.689 (perm p=0.048, n=10)
+data share | fertility: partial=+0.605 (perm p=0.122, n=9)
+data share | strr: partial=+0.627 (perm p=0.108, n=9)
+
+--- bloom-7b1 | 4-shot --- data share alone: rho=+0.867 (p=0.001, n=10)
+data share | premium: partial=+0.844 (perm p=0.004, n=10)
+data share | fertility: partial=+0.734 (perm p=0.045, n=9)
+data share | strr: partial=+0.744 (perm p=0.043, n=9)
+
+======== POWER: smallest |rho| detectable at 80% power, two-sided alpha .05 ========
+Fisher z with the Spearman variance 1.06/(n-3-k); k = number of covariates
+n=18: zero-order 0.63 | partial, one covariate 0.65
+n=15: zero-order 0.68 | partial, one covariate 0.70
+n=10: zero-order 0.80 | partial, one covariate 0.83
+n= 9: zero-order 0.83 | partial, one covariate 0.86
+
+======== BYTE-PREMIUM CONTROL (BLOOM): byte shares divided by the byte premium ========
+rank changes (1 = largest share): id 6->5, hi 5->6, te 8->9, eu 9->8
+
+--- bloom-7b1 | 0-shot ---
+premium | share_bp: partial=+0.277 (perm p=0.465) || share_bp | premium: partial=+0.752 (perm p=0.021), n=10
+fertility | share_bp: partial=-0.285 (perm p=0.483) || share_bp | fertility: partial=+0.638 (perm p=0.092), n=9
+strr | share_bp: partial=+0.228 (perm p=0.582) || share_bp | strr: partial=+0.667 (perm p=0.076), n=9
+
+--- bloom-7b1 | 4-shot ---
+premium | share_bp: partial=+0.196 (perm p=0.600) || share_bp | premium: partial=+0.875 (perm p=0.002), n=10
+fertility | share_bp: partial=-0.305 (perm p=0.456) || share_bp | fertility: partial=+0.771 (perm p=0.026), n=9
+strr | share_bp: partial=+0.284 (perm p=0.489) || share_bp | strr: partial=+0.786 (perm p=0.023), n=9
